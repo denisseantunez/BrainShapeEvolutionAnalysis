@@ -1,6 +1,9 @@
 '''
     Adapted code from https://github.com/tiborkubik/toothForge 
 
+    Functions responsible for aligning spectral embeddings with Iterative Closest Point (ICP)
+    and k nearest neighbors.
+
 '''
 
 import math
@@ -15,12 +18,15 @@ import SpectralMesh
 
 
 def find_closest_points_in_spectral_domain(X_1, X_2):
+    """
+    Find nearest-neighbor correspondences between two point sets in spectral space.
+    """
     tree_X_2 = cKDTree(X_2)
     _, corr_1_2 = tree_X_2.query(X_1)  # all corresponding points from embedding 1 onto embedding 2
 
     del tree_X_2
 
-    return corr_1_2
+    return corr_1_2 # Indices of closest points in X_2 for each point in X_1.
 
 
 def find_rotation_closed_form_iterative(m1: SpectralMesh,
@@ -28,6 +34,30 @@ def find_rotation_closed_form_iterative(m1: SpectralMesh,
                                         opts: dict,
                                         data_term: bool = False,
                                         ) -> dict:
+    """
+    Align two meshes in spectral space using iterative closest point.
+
+    Args:
+        m1 (SpectralMesh) : First spectral mesh.
+        m2 (SpectralMesh) : Second spectral mesh.
+        opts (dict) :
+            Dictionary of options containing:
+                - 'niter': list[int]   number of iterations per reconstruction stage
+                - 'kr': list[list[int]]  eigenmode indices used at each stage
+        data_term (bool, optional) :
+            If True, additional per-vertex data (m1.extended_data, m2.extended_data) is used
+            in the embedding to guide alignment.
+
+    Returns:
+        corr (dict) :
+            Dictionary with the following entries:
+            - 'corr_12': nearest neighbor correspondences from m1 -> m2
+            - 'corr_21': nearest neighbor correspondences from m2 -> m1
+            - 'C_12': sparse correspondence matrix (m1->m2)
+            - 'C_21': sparse correspondence matrix (m2->m1)
+            - 'R_12': spectral rotation matrix (m1->m2)
+            - 'R_21': spectral rotation matrix (m2->m1)
+    """
     Z_1 = m1.graph.X[:, :3]
     Z_2 = m2.graph.X[:, :3]
 
@@ -41,6 +71,7 @@ def find_rotation_closed_form_iterative(m1: SpectralMesh,
         
     }
 
+    # In case you have other extra data per vertex
     if data_term:
         assert m1.extended_data is not None
         assert m2.extended_data is not None
@@ -65,8 +96,9 @@ def find_rotation_closed_form_iterative(m1: SpectralMesh,
             corr['corr_12'] = find_closest_points_in_spectral_domain(Z_1_o,
                                                                      Z_2)  # closest points of M1 in M2. Shape: [n_z_1, ]
         
-            corr['corr_21'] = find_closest_points_in_spectral_domain(Z_2_o, Z_1)
+            corr['corr_21'] = find_closest_points_in_spectral_domain(Z_2_o, Z_1) # closest points of M2 in M1.
           
+            # Create correspondence matrices for the two cases
             C_12 = coo_matrix((np.ones(Z_1_o.shape[0]),
                                (np.arange(Z_1_o.shape[0]), corr['corr_12'])),
                               shape=(Z_1_o.shape[0], Z_2_o.shape[0]))
@@ -74,6 +106,7 @@ def find_rotation_closed_form_iterative(m1: SpectralMesh,
                                (np.arange(Z_2_o.shape[0]), corr['corr_21'])),
                               shape=(Z_2_o.shape[0], Z_1_o.shape[0]))
 
+            # Compute errors
             err_X = np.sum(np.sum((Z_1[corr['corr_21'], :3] - Z_2_o[:, :3]) ** 2, axis=1))
             err_Z = np.sum(np.sum((Z_1[corr['corr_21'], :] - Z_2_o) ** 2, axis=1))
             errs_X.append(err_X)
@@ -82,6 +115,7 @@ def find_rotation_closed_form_iterative(m1: SpectralMesh,
                   f'Total sum of squared differences X: {err_X}'
                   f'Total sum of squared differences Z: {err_Z}')
 
+            # Stop if error increases
             if err_Z > last_err_Z:
                 Z_1 = last_Z_1
                 Z_2 = last_Z_2
@@ -121,7 +155,7 @@ def find_rotation_closed_form_iterative(m1: SpectralMesh,
             else:
                 Z_2 = Y_2
 
-    
+    # Save last correspondences and transforms
     corr['C_12'] = C_12
     corr['C_21'] = C_21
     corr['R_12'] = R_12

@@ -1,6 +1,10 @@
 '''
     Adapted code from https://github.com/tiborkubik/toothForge 
 
+    This module defines the Graph class, which computes spectral features of a 3D mesh
+    using different Laplacian approximations (Beltrami, cotangent, mesh-based, or FEM).
+    The class performs eigen-decomposition of the Laplacian and produces a set of 
+    spectral embeddings.
 '''
 
 import lapy
@@ -14,6 +18,11 @@ from scipy.sparse.linalg import eigs, eigsh
 
 
 class Graph:
+    """
+    Represents a graph structure derived from a triangular mesh. 
+    Provides methods to compute Laplace-Beltrami operator approximations, 
+    perform spectral decomposition, and extract spectral embeddings.
+    """
     def __init__(self,
                  mesh_tri: trimesh.Trimesh,
                  k: int = 3,
@@ -32,13 +41,13 @@ class Graph:
         self.eig_vals, self.eig_vecs, self.eig_vecs_inv, self.X = self.apply_decomposition()
 
     def get_laplacian(self):
-        #print(f'Computing Laplacian of shape {len(self.mesh_tri.vertices)} x {len(self.mesh_tri.vertices)}...')
+        print(f'Computing Laplacian of shape {len(self.mesh_tri.vertices)} x {len(self.mesh_tri.vertices)}...')
         L, M = self.get_laplace_operator_approximation()
 
         return L, M
 
     def apply_decomposition(self):
-        #print(f'Computing top {self.k} eigenvectors and eigenvalues...')
+        print(f'Computing top {self.k} eigenvectors and eigenvalues...')
         eig_vals, eig_vecs = eigs(self.L, k=self.k, sigma=1e-10, which='LR')
 
         eig_vals = np.real(eig_vals)

@@ -1,6 +1,10 @@
 '''
     Adapted code from https://github.com/tiborkubik/toothForge 
 
+    This module defines the SpectralMesh class for loading and normalizing surface meshes,
+    buildind a spectral graph representation of the mesh, 
+    storing eigen decomposition data (spectrum, eigenvectors, coefficients, etc)
+    and visualizing shape eigenmodes using PyVista.
 '''
 
 import os
@@ -131,9 +135,9 @@ class SpectralMesh:
 
         plotter.link_views()
         plotter.camera_position = [
-            (-1, 0, 0),  # Camera position (from -X)
-            (0, 0, 0),   # Focal point (center of the scene)
-            (0, 0, 1)    # View up (Z axis up)
+            (-1, 0, 0),  
+            (0, 0, 0),   
+            (0, 0, 1)    
         ]
         plotter.reset_camera()
 
