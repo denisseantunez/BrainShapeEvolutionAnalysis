@@ -13,7 +13,17 @@ Apply **spectral shape analysis** to:
 3. Run:
    ```bash
    python generate_data.py
-   
+
+## Core requirements
+- numpy
+- scipy
+- matplotlib
+- pyvista
+- trimesh
+- tables
+- nilearn
+- lapy
+
 <img width="1160" height="1128" alt="RadialTreeThumbnails" src="https://github.com/user-attachments/assets/b03f5b77-1927-4ce9-a446-49cddc25c183" />
 
 
